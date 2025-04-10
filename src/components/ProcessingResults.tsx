@@ -12,28 +12,30 @@ export function ProcessingResults({ results, totalToProcess }: Props) {
   const handleDownloadCSV = () => {
     // Add BOM for Excel UTF-8 compatibility
     const BOM = '\uFEFF';
-    
+
     // Create CSV header and content
     const csvRows = [
       ['URL', 'Status', 'Result'],
-      ...results.map(result => [
-        // Escape fields that might contain commas
-        `"${result.url}"`,
-        result.status,
-        // Clean up the data/html content for CSV
-        `"${result.html ? 'HTML content' : (result.data?.toString() || '')}"`
-      ])
+      ...results
+        .filter((result) => !result.data?.includes('No spelling issues found'))
+        .map((result) => [
+          // Escape fields that might contain commas
+          `"${result.url}"`,
+          result.status,
+          // Clean up the data/html content for CSV
+          `"${result.html?.toString() || ''}"`
+        ])
     ];
 
     // Join rows and columns properly
-    const csvContent = BOM + csvRows.map(row => row.join(',')).join('\n');
+    const csvContent = BOM + csvRows.map((row) => row.join(',')).join('\n');
 
     // Create and trigger download
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     const timestamp = new Date().toISOString().split('T')[0];
-    
+
     link.setAttribute('href', url);
     link.setAttribute('download', `url-results-${timestamp}.csv`);
     document.body.appendChild(link);
@@ -54,8 +56,19 @@ export function ProcessingResults({ results, totalToProcess }: Props) {
           </div>
           {results.length > 0 && results.length === totalToProcess && (
             <button
+              disabled={
+                !results.some(
+                  (result) => !result.data?.includes('No spelling issues found')
+                )
+              }
               onClick={handleDownloadCSV}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+                !results.some(
+                  (result) => !result.data?.includes('No spelling issues found')
+                )
+                  ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                  : 'bg-blue-500 text-white hover:bg-blue-600'
+              }`}
             >
               <Download size={16} />
               Download CSV
